@@ -1,6 +1,6 @@
 # Meteostansiya — loyiha holati
 
-_Oxirgi yangilanish: 2026-09-07 (yomg'ir baytining haqiqiy offseti topildi)_
+_Oxirgi yangilanish: 2026-09-07 (yomg'ir baytining offseti topildi + DL1 takroriy uzilish muammosi hujjatlashtirildi)_
 
 ## Server kirish
 
@@ -79,6 +79,10 @@ To'liq parser: `dl1_bridge.py` (pastga qarang).
    - Tekshirildi: sslh loglarida (`journalctl -u sslh`) xom bayt oqimi to'g'ri `127.0.0.1:8888`ga yo'nalgani ko'rindi; `downloader.saidmurod.com` (boshqa loyiha, xuddi shu Traefik orqali) tashqaridan hali ham muammosiz ishlayapti — production'ga hech qanday zarar yetmadi.
    - **Natija**: endi DL1'ning `8.Set → a.Wireless IP` (SIM) maydoniga `87.192.241.25:8888` emas, **`87.192.241.25:443`** yozish kerak — sslh avtomatik DL1 trafigini `dl1-bridge`ga uzatadi. Hali sinovdan o'tkazilmagan (SIM ertaga keladi).
    - Yon effekt (zararsiz): o'rnatish paytida serverda avvaldan yarim-o'rnatilgan **apache2** paketi ham konfiguratsiya qilinib, `systemd`ga yoqilib qoldi. Portlar band bo'lgani uchun ishga tushmayapti (`systemctl status apache2` → failed), lekin hali `enabled` holatda — xohlasa keyinroq `systemctl disable --now apache2 && systemctl mask apache2` bilan tozalash mumkin (bu ish keyinga qoldirildi).
+7. **DL1 takroriy "osilib qolishi" (2026-09-07, qisman tuzatildi, ochiq muammo qoldi)** — yomg'ir sensorini qo'lda tekshirish paytida (yuqoridagi DL1 protokoli bo'limiga qarang) DL1 bir necha marta ma'lumot yuborishni to'xtatib qo'ydi:
+   - **1-sabab (tuzatildi)**: `dl1_bridge.py`da `conn.settimeout(60)` bor edi — DL1 60 soniyadan ko'proq jim tursa, bridge ulanishni **jimgina** (log yozmasdan) yopib yuborardi, DL1 esa buni tez sezib qayta ulanmasdi (bir marta ~13 daqiqa, oxirida qo'lda o'chirib-yoqishga to'g'ri keldi). Tuzatildi: timeout 600s'ga oshirildi, va yopilganda endi log yoziladi (`"{ip}: idle timeout, closing connection"`).
+   - **2-sabab (hali tuzatilmagan, DL1 tomonida)**: bundan tashqari, TCP-ulanish **ochiq (`ESTAB`) holatda turib**, DL1 baribir ma'lumot yuborishni to'xtatib qo'ygan holat ham kuzatildi (bridge tomonidan hech qanday xatolik yo'q, shunchaki DL1 jim). Bu safar ham faqat DL1'ni qo'lda o'chirib-yoqish yordam berdi. Sabab noaniq — ehtimol RS485 shinasi (ayniqsa yomg'ir sensori kabeli qo'lda tekshirilgandan keyin) yoki DL1 firmware'ining o'zidagi tuzatilmagan holat. **Kabellar hali tekshirilmagan** — keyingi safar shu muammo qaytarilsa, birinchi navbatda RS485 A/B ulanishlarini (ayniqsa Addr 0004) tekshirish kerak.
+   - **Umumiy tavsiya**: agar grafik yana to'xtab qolsa — avval `ss -tn | grep 192.168.1.50` bilan ulanish holatini tekshiring (yopiqmi yoki "ESTAB" holida osilib qolganmi), keyin `docker logs dl1-bridge --tail 20`. Hozircha yagona ishonchli yechim — DL1'ni qo'lda o'chirib-yoqish.
 
 ## MUHIM KASHFIYOT: server ofis bilan bir lokal tarmoqda
 
@@ -119,3 +123,5 @@ DL1 (ofis, Ethernet, LAN IP Set = 192.168.1.44:8888) → iep-server (lokal tarmo
    - **DNS**: domen registratorda `A` yozuv `iep.uz` → `87.192.241.25`; qulayligi uchun wildcard `*.iep.uz` → `87.192.241.25` ham qo'shish tavsiya etiladi (shunda har yangi subdomen uchun alohida DNS yozuv shart bo'lmaydi).
    - **Coolify**: korxona sayti uchun yangi application yaratib, "Domains" maydoniga `iep.uz` (va xohlasa `www.iep.uz`) kiritish; boshqa har bir mavjud/kelajakdagi loyiha uchun ham shunga o'xshab o'z "Domains" maydoniga mos `nimadir.iep.uz` yozish — Traefik/sertifikat avtomatik ishlaydi.
 7. Serverdagi qoldiq **apache2** paketini tozalash (ixtiyoriy, zararsiz — "Infratuzilma holati" bo'limidagi item 6'dagi eslatmaga qarang): `systemctl disable --now apache2 && systemctl mask apache2`.
+8. **DL1'ning takroriy "osilib qolishi" muammosini sababini topish** ("Infratuzilma holati" bo'limi, item 7'ga qarang) — RS485 kabellarini (ayniqsa yomg'ir sensori) tekshirish hali qilinmagan. Agar takrorlansa, DL1 sotuvchisi/hujjatiga murojaat qilish kerak bo'lishi mumkin.
+9. **Ma'lumot to'xtasa ogohlantirish tizimi** (ThingsBoard Notification Center orqali, device inactivity asosida) — foydalanuvchi so'ragan, lekin Chrome kengaytmasi ulanmagani sabab hali sozlanmagan. Kengaytma ishlagach yoki qadam-baqadam qo'lda sozlash orqali davom ettirish kerak.
