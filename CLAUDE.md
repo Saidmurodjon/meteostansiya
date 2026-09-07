@@ -1,6 +1,6 @@
 # Meteostansiya — loyiha holati
 
-_Oxirgi yangilanish: 2026-09-04 (sslh port-multiplekser qo'shildi)_
+_Oxirgi yangilanish: 2026-09-07 (yomg'ir baytining haqiqiy offseti topildi)_
 
 ## Server kirish
 
@@ -54,7 +54,7 @@ Tasdiqlangan maydonlar (0-indexdan, Python `struct` bilan):
 - `data[22]` (1 bayt) = **Yorug'lik ÷ 10** (Lux) — 100% tasdiqlangan
 - `data[27]` (1 bayt) = **Shamol tezligi × 100** (m/s) — yuqori ehtimol (aniq mos, lekin shamol o'zgaruvchan bo'lgani uchun screen bilan solishtirish ±0.5 farq berishi mumkin)
 - `data[31:33]` (uint16 BE) = **Shamol yo'nalishi** (gradus, xom qiymat) — 100% tasdiqlangan
-- `data[38:40]` (uint16 BE, taxminiy) = **Yomg'ir miqdori ÷ 10** (mm) — **hali tasdiqlanmagan**, chunki test paytida doim 0.0mm bo'lgan. Yomg'ir yog'ganda yoki asboblarni qo'lda ishga tushirib qayta tekshirish kerak.
+- `data[37]` (1 bayt, ÷ 10, mm) — **2026-09-07'da qo'lda tirqillatib tasdiqlangan** (eski taxmin `data[38:40]` noto'g'ri edi — u doim `0x0000`). Test paytida qiymat `10 → 10 → 4 → 0` bo'lib ~2 daqiqada nolga tushdi (qo'lda tez-tez bosishdan keyin mexanik "bounce" bosilgani asosida) — bu **umumiy yig'indi emas, balki qisqa muddatli tip-count/intensity ko'rsatkichi** bo'lishi mumkin degan taxminni beradi. Aniq birlik/masshtab (÷10 mm to'g'rimi) va xulq-atvor (haqiqiy uzoq davomli yomg'irda ham nolga tushib turadimi yoki yig'iladimi) hali **haqiqiy yomg'ir bilan tasdiqlanishi kerak**.
 - Oxirgi 4 bayt = checksum/CRC (formula aniqlanmagan, hozircha tekshirilmayapti)
 
 To'liq parser: `dl1_bridge.py` (pastga qarang).
@@ -112,7 +112,7 @@ DL1 (ofis, Ethernet, LAN IP Set = 192.168.1.44:8888) → iep-server (lokal tarmo
 
 1. **Ertangi SIM uchun**: DL1'ning `8.Set → a.Wireless IP` maydoniga **`87.192.241.25:443`** yozish (8888 emas — sslh 443-portda ikkalasini ham ajratadi, "Infratuzilma holati" bo'limi, item 6'ga qarang). UzTelecom'ga port ochish so'rovi yuborish endi shart emas. Bu hali sinovdan o'tkazilmagan — SIM kelgach birinchi navbatda shuni tekshirish kerak (`docker logs dl1-bridge` va `journalctl -u sslh` orqali kuzatish mumkin).
 2. ThingsBoard standart parolini (`tenant@thingsboard.org`/`tenant`) almashtirish.
-3. Yomg'ir miqdori baytini (`data[38:40]` taxmin) haqiqiy yomg'ir bilan tasdiqlash.
+3. Yomg'ir bayti endi to'g'ri offsetdan (`data[37]`) o'qilmoqda (2026-09-07'da tuzatildi, kod deploy qilindi), lekin ÷10 mm masshtabi va "umumiy yig'indimi yoki qisqa muddatli ko'rsatkichmi" degan savol hali **haqiqiy yomg'ir bilan tasdiqlanishi kerak** (yuqoridagi "DL1 protokoli" bo'limiga qarang).
 4. Qolgan 4 ta stansiyani ham xuddi shu tartibda ulash — har biri uchun alohida ThingsBoard device yaratish + `dl1_bridge.py`dagi `DEVICE_TOKENS` xaritasiga IP→token yozuvi qo'shish kerak bo'ladi (server skriptida: `/home/iep-server/dl1-bridge/dl1_bridge.py`, konteynerni qayta ishga tushirish kerak bo'ladi o'zgartirilgach).
 5. `dl1_bridge_local.py` (noutbuk-orqali eski versiya) endi shart emas — istasa o'chirib qo'yish mumkin, lekin zarari yo'q.
 6. **Domen rejasi: `iep.uz`** — kelajakda korxona veb-saytini shu domenda, Coolify'dagi boshqa loyihalarni esa `subdomen.iep.uz` manzillarida yurgizish rejalashtirilgan (masalan ThingsBoard uchun `tb.iep.uz`). Infratuzilma buning uchun **allaqachon tayyor** — Traefik bir nechta domen/subdomenni parallel Host-based marshrutlash bilan xizmat qiladi va Let's Encrypt sertifikatini avtomatik oladi (bu `downloader.saidmurod.com`da tasdiqlangan). "Infratuzilma holati" bo'limidagi `sslh` o'zgarishi (item 6) bunga xalaqit bermaydi — HTTPS trafik har doim TLS bo'lgani uchun sslh uni avtomatik Traefik'ga yo'naltiradi, 80-port (Let's Encrypt HTTP-01 challenge uchun) umuman o'zgartirilmagan. UzTelecom'ga aloqasi yo'q — hammasi DNS + Coolify darajasida hal bo'ladi:

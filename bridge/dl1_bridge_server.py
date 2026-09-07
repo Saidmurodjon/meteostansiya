@@ -44,8 +44,13 @@ def parse_frame(data: bytes):
     light_raw = data[22]
     wind_speed_raw = data[27]
     wind_dir_raw = struct.unpack(">H", data[31:33])[0]
-    # Rainfall byte offset not yet confirmed (always 0.0mm in test samples).
-    rainfall_raw = struct.unpack(">H", data[38:40])[0]
+    # Confirmed 2026-09-07 via a manual tipping-bucket test: single byte at
+    # offset 37 (not the 2-byte data[38:40] guess, which is always 0x0000).
+    # Scaling assumed to match the temp/humidity convention (raw/10); the
+    # value decayed 10 -> 4 -> 0 over ~2 minutes after the manual test rather
+    # than accumulating, so it may be a short-term pulse count/intensity
+    # rather than a running total mm - re-verify against real rainfall.
+    rainfall_raw = data[37]
 
     return {
         "device_minute": minute,
