@@ -35,7 +35,7 @@ Markaziy blok: **"Intelligent Data Logger · DL1"** (plata: `LS-DL1-V1.21`, 2021
 - LoRa modul: **Ebyte E22-400T22S** (SX1268, 400MHz, 22dBm)
 - Ethernet: standart RJ45 (HanRun HR911105A)
 - RS485 klemma (A/B) + quyosh kontrolleri (PWM, 12/24V 10A) orqali quvvatlanadi
-- Ma'lumotni ichida buferlaydi (aloqa uzilsa yo'qolmaydi — "Export data" orqali USB'ga ham chiqarish mumkin)
+- Ma'lumotni ichida buferlaydi (aloqa uzilsa sensor o'qishlarining o'zi DL1 xotirasida yo'qolmaydi — "Export data" orqali USB'ga chiqarish mumkin). **Lekin 2026-09-07'dagi 3 marta real uzilishda tasdiqlandi: bu bufer TCP orqali avtomatik "backfill" qilinmaydi** — ulanish tiklanganda DL1 faqat o'sha paytdagi jonli o'qishni yuboradi, uzilish davridagi ma'lumot ThingsBoard bazasiga hech qachon tushmaydi (grafikda bo'shliq qoladi). Uni tiklash uchun hozircha faqat qo'lda USB export + alohida import kerak bo'ladi (bunday avtomatik import quvuri hali yo'q).
 
 DL1 menyusi: `8.Set` → **a.Wireless IP** (SIM) / **b.LAN IP** (Ethernet) / **c.Data Router** (4G/LAN/RS232 kanallarini yoqish-o'chirish) / **d.LoRa**. Har birida server IP:Port maydoni bor. Muhim: faqat IP/Port kiritish yetarli emas — `c.Data Router`da tegishli kanal (masalan `LAN:YES`) ham yoqilgan bo'lishi kerak.
 
