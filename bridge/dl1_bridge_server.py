@@ -80,7 +80,11 @@ def push_to_thingsboard(token: str, telemetry: dict) -> bool:
 
 def handle_conn(conn: socket.socket, addr):
     ip = addr[0]
-    conn.settimeout(60)
+    # DL1 keeps one long-lived connection and can go quiet for a few minutes
+    # between reports without actually being dead. A short timeout here made
+    # the bridge silently close the connection out from under DL1, which
+    # then took a long time to notice and reconnect (2026-09-07 incident).
+    conn.settimeout(600)
     try:
         buf = b""
         while True:
@@ -102,7 +106,7 @@ def handle_conn(conn: socket.socket, addr):
                 ok = push_to_thingsboard(token, parsed)
                 log(f"{ip}: push to ThingsBoard {'OK' if ok else 'FAILED'}")
     except socket.timeout:
-        pass
+        log(f"{ip}: idle timeout, closing connection")
     except Exception as e:
         log(f"{ip}: connection error: {e}")
     finally:
