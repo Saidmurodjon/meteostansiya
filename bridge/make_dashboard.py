@@ -5,7 +5,7 @@ import urllib.request
 TB_BASE = "http://10.0.2.2:9090"
 USERNAME = "tenant@thingsboard.org"
 PASSWORD = "tenant"
-DEVICE_ID = "d3db67d0-a7a5-11f1-94ba-71e730ea5bb5"  # Metrostansiya-1
+DEVICE_ID = "d3db67d0-a7a5-11f1-94ba-71e730ea5bb5"  # Meteostansiya-1
 
 METRICS = [
     {"name": "temperature", "label": "Harorat", "units": "°C", "color": "#EF5350", "icon": "thermostat", "iconColor": "#EF5350"},
@@ -36,7 +36,7 @@ def build_widget(metric, row, col):
             {
                 "type": "entity",
                 "name": "",
-                "entityAliasId": "metrostansiya-alias",
+                "entityAliasId": "meteostansiya-alias",
                 "dataKeys": [
                     {
                         "name": metric["name"],
@@ -176,11 +176,11 @@ def main():
     login = http_json("POST", f"{TB_BASE}/api/auth/login", body={"username": USERNAME, "password": PASSWORD})
     token = login["token"]
 
-    entity_alias_id = "metrostansiya-alias"
+    entity_alias_id = "meteostansiya-alias"
     entity_aliases = {
         entity_alias_id: {
             "id": entity_alias_id,
-            "alias": "Metrostansiya-1",
+            "alias": "Meteostansiya-1",
             "filter": {
                 "type": "singleEntity",
                 "singleEntity": {"id": DEVICE_ID, "entityType": "DEVICE"},
@@ -210,7 +210,7 @@ def main():
         "widgets": widgets,
         "states": {
             "default": {
-                "name": "Metrostansiya-1",
+                "name": "Meteostansiya-1",
                 "root": True,
                 "layouts": {
                     "main": {
@@ -251,7 +251,7 @@ def main():
     }
 
     dashboard = {
-        "title": "Metrostansiya-1",
+        "title": "Meteostansiya-1",
         "configuration": dashboard_config,
     }
 

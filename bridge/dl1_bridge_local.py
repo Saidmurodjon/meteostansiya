@@ -7,13 +7,13 @@ import urllib.error
 import threading
 
 LISTEN_PORT = 8888
-LOGFILE = "/private/tmp/claude-501/-Users-macbookprom2pro-Desktop-metrostansiya/aefeeed4-038d-4095-b52b-b2c29e6d129c/scratchpad/dl1_bridge.log"
+LOGFILE = "/private/tmp/claude-501/-Users-macbookprom2pro-Desktop-meteostansiya/aefeeed4-038d-4095-b52b-b2c29e6d129c/scratchpad/dl1_bridge.log"
 
 # ThingsBoard connection (via Tailscale). Will work once the host port mapping
 # (9090 -> container 9090) is fixed in Coolify.
 TB_HOST = "100.111.79.124"
 TB_PORT = 9090
-TB_ACCESS_TOKEN = "FQqLrpZpTDTzi73xnZk0"  # device: Metrostansiya-1
+TB_ACCESS_TOKEN = "FQqLrpZpTDTzi73xnZk0"  # device: Meteostansiya-1
 
 # Map DL1 source IP -> ThingsBoard access token, for when more stations are added.
 DEVICE_TOKENS = {

@@ -1,4 +1,4 @@
-# Metrostansiya — loyiha holati
+# Meteostansiya — loyiha holati
 
 _Oxirgi yangilanish: 2026-09-04 (sslh port-multiplekser qo'shildi)_
 
@@ -20,7 +20,7 @@ Eslatma:
 
 ## Loyiha maqsadi
 
-5 ta mobil metrostansiya (meteo o'lchov punktlari) bor. Har biri SIM (mobil aloqa), Ethernet yoki LoRa (radio chastota) orqali bog'lanadi va ma'lumot uzatadi. Rasm/tasvir uzatish **kerak emas** (stansiya suratlari faqat referens uchun `Rasmlar/` papkasiga qo'lda yuklangan). Maqsad — stansiyalardan kelayotgan sensor ma'lumotlarini serverga uzatib, ThingsBoard'da qabul qilish, saqlash va monitoring qilish.
+5 ta mobil meteostansiya (meteo o'lchov punktlari) bor. Har biri SIM (mobil aloqa), Ethernet yoki LoRa (radio chastota) orqali bog'lanadi va ma'lumot uzatadi. Rasm/tasvir uzatish **kerak emas** (stansiya suratlari faqat referens uchun `Rasmlar/` papkasiga qo'lda yuklangan). Maqsad — stansiyalardan kelayotgan sensor ma'lumotlarini serverga uzatib, ThingsBoard'da qabul qilish, saqlash va monitoring qilish.
 
 ## Hardware (test stansiyasi, ofisda)
 
@@ -95,15 +95,15 @@ DL1 (ofis, Ethernet, LAN IP Set = 192.168.1.44:8888) → iep-server (lokal tarmo
 **Noutbuk endi umuman kerak emas** — zanjir butunlay serverning o'zida ishlaydi. Tasdiqlangan (`docker logs dl1-bridge` orqali): `push to ThingsBoard OK`.
 
 - Ishlayotgan konteyner: `iep-server`da **`dl1-bridge`** (`--network host --restart=always`, skript: `/home/iep-server/dl1-bridge/dl1_bridge.py`, `localhost:9090` orqali ThingsBoard'ga ulanadi)
-- Manba nusxalari loyihada: `metrostansiya/bridge/dl1_bridge_server.py` (serverdagi versiya), `metrostansiya/bridge/dl1_bridge_local.py` (eski, noutbuk-orqali versiya — endi kerak emas, faqat tarix uchun saqlangan)
-- Dashboard qayta yaratish skripti: **`metrostansiya/bridge/make_dashboard.py`** (server ichidan `python3` bilan ishga tushiriladi, `10.0.2.2:9090` orqali ThingsBoard API'siga ulanadi)
+- Manba nusxalari loyihada: `meteostansiya/bridge/dl1_bridge_server.py` (serverdagi versiya), `meteostansiya/bridge/dl1_bridge_local.py` (eski, noutbuk-orqali versiya — endi kerak emas, faqat tarix uchun saqlangan)
+- Dashboard qayta yaratish skripti: **`meteostansiya/bridge/make_dashboard.py`** (server ichidan `python3` bilan ishga tushiriladi, `10.0.2.2:9090` orqali ThingsBoard API'siga ulanadi)
 - Serverga ikkita yo'l bilan SSH ulanish mumkin: Tailscale (`100.111.79.124`, har qanday joydan) yoki ofis lokal tarmog'idan (`192.168.1.44`, tezroq, faqat shu ofisdan turib)
 
 ## ThingsBoard obyektlari (joriy)
 
 - Tenant login: `tenant@thingsboard.org` / `tenant`
-- Device: **Metrostansiya-1** (id: `d3db67d0-a7a5-11f1-94ba-71e730ea5bb5`), access token: `FQqLrpZpTDTzi73xnZk0`
-- Dashboard: **Metrostansiya-1** (id: `dca756c0-a7a6-11f1-94ba-71e730ea5bb5`) — 6 ta time-series chart widget (Harorat, Namlik, Yorug'lik, Shamol tezligi, Shamol yo'nalishi, Yog'ingarchilik)
+- Device: **Meteostansiya-1** (id: `d3db67d0-a7a5-11f1-94ba-71e730ea5bb5`), access token: `FQqLrpZpTDTzi73xnZk0`
+- Dashboard: **Meteostansiya-1** (id: `dca756c0-a7a6-11f1-94ba-71e730ea5bb5`) — 6 ta time-series chart widget (Harorat, Namlik, Yorug'lik, Shamol tezligi, Shamol yo'nalishi, Yog'ingarchilik)
   - URL: `http://100.111.79.124:9090/dashboards/dca756c0-a7a6-11f1-94ba-71e730ea5bb5` (faqat Tailscale orqali ochiladi)
 
 ⚠️ Agar ThingsBoard yana redeploy qilinsa/konteyner qayta yaratilsa, yuqoridagi ID/tokenlar bekor bo'lishi mumkin (agar volume muammosi to'liq tuzatilmagan bo'lsa) — shu holatda device/dashboard'ni qaytadan yaratish kerak bo'ladi (jarayon yuqorida yozilgan, `make_dashboard.py` skripti orqali tez qayta yaratish mumkin, lekin bu skript ham vaqtinchalik scratchpad papkasida).

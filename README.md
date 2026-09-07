@@ -1,6 +1,6 @@
-# Metrostansiya
+# Meteostansiya
 
-Telemetry pipeline for a network of remote weather-monitoring stations ("metro stations"), streaming sensor data over cellular, Ethernet, or LoRa into [ThingsBoard](https://thingsboard.io/) for storage and monitoring.
+Telemetry pipeline for a network of remote weather-monitoring stations, streaming sensor data over cellular, Ethernet, or LoRa into [ThingsBoard](https://thingsboard.io/) for storage and monitoring.
 
 ## Overview
 
