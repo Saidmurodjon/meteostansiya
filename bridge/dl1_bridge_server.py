@@ -16,7 +16,7 @@ TB_PORT = 9090
 
 # Map DL1 source IP -> ThingsBoard access token. Add one entry per station.
 DEVICE_TOKENS = {
-    "192.168.1.50": "FQqLrpZpTDTzi73xnZk0",  # Meteostansiya-1 (office test unit)
+    "192.168.1.50": "FQqLrpZpTDTzi73xnZk0",  # Metrostansiya-1 (office test unit)
 }
 
 
