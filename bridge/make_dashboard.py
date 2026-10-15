@@ -1,10 +1,25 @@
 import json
 import uuid
 import urllib.request
+import os
+
+
+def _load_env(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")):
+    # Secrets live in a gitignored bridge/.env (see .env.example), not in the repo.
+    if os.path.exists(path):
+        for line in open(path):
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                os.environ.setdefault(k.strip(), v.strip())
+
+
+_load_env()
+
 
 TB_BASE = "http://10.0.2.2:9090"
-USERNAME = "tenant@thingsboard.org"
-PASSWORD = "tenant"
+USERNAME = os.environ["TB_USERNAME"]
+PASSWORD = os.environ["TB_PASSWORD"]
 DEVICE_ID = "d3db67d0-a7a5-11f1-94ba-71e730ea5bb5"  # Meteostansiya-1
 
 METRICS = [

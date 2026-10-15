@@ -5,6 +5,21 @@ import json
 import urllib.request
 import urllib.error
 import threading
+import os
+
+
+def _load_env(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")):
+    # Secrets live in a gitignored bridge/.env (see .env.example), not in the repo.
+    if os.path.exists(path):
+        for line in open(path):
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                os.environ.setdefault(k.strip(), v.strip())
+
+
+_load_env()
+
 
 LISTEN_PORT = 8888
 LOGFILE = "/data/dl1_bridge.log"
@@ -16,7 +31,7 @@ TB_PORT = 9090
 
 # Map DL1 source IP -> ThingsBoard access token. Add one entry per station.
 DEVICE_TOKENS = {
-    "192.168.1.50": "FQqLrpZpTDTzi73xnZk0",  # Metrostansiya-1 (office test unit)
+    "192.168.1.50": os.environ["TB_TOKEN_STATION1"],  # Metrostansiya-1 (office test unit)
 }
 
 

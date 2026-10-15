@@ -5,15 +5,30 @@ import json
 import urllib.request
 import urllib.error
 import threading
+import os
+
+
+def _load_env(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")):
+    # Secrets live in a gitignored bridge/.env (see .env.example), not in the repo.
+    if os.path.exists(path):
+        for line in open(path):
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                os.environ.setdefault(k.strip(), v.strip())
+
+
+_load_env()
+
 
 LISTEN_PORT = 8888
 LOGFILE = "/private/tmp/claude-501/-Users-macbookprom2pro-Desktop-meteostansiya/aefeeed4-038d-4095-b52b-b2c29e6d129c/scratchpad/dl1_bridge.log"
 
 # ThingsBoard connection (via Tailscale). Will work once the host port mapping
 # (9090 -> container 9090) is fixed in Coolify.
-TB_HOST = "100.111.79.124"
+TB_HOST = os.environ.get("TB_HOST_TAILSCALE", "localhost")
 TB_PORT = 9090
-TB_ACCESS_TOKEN = "FQqLrpZpTDTzi73xnZk0"  # device: Meteostansiya-1
+TB_ACCESS_TOKEN = os.environ["TB_TOKEN_STATION1"]  # device: Meteostansiya-1
 
 # Map DL1 source IP -> ThingsBoard access token, for when more stations are added.
 DEVICE_TOKENS = {

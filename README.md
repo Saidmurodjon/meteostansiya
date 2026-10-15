@@ -60,6 +60,13 @@ Station 1 (office test unit) is connected end-to-end over Ethernet/local network
 └── Rasmlar/           # reference photos of the test station hardware
 ```
 
+## Server requirements
+
+Two deployment variants are documented in [`docs/SERVER_REQUIREMENTS.md`](./docs/SERVER_REQUIREMENTS.md) (in Uzbek):
+
+- **v1 — ThingsBoard**: full IoT platform, ~1.2 GB RAM for ThingsBoard alone; 2 vCPU / 4 GB RAM / 40 GB SSD recommended.
+- **v2 — Grafana + VictoriaMetrics**: lightweight time-series stack, ~80 MB RAM measured; 1–2 vCPU / 2 GB RAM / 20 GB SSD recommended. Test setup lives in [`grafana-test/`](./grafana-test) with [`bridge/log_to_vm.py`](./bridge/log_to_vm.py).
+
 ## Security note
 
-This repository is private and contains real infrastructure details (server addresses, access tokens, default credentials) for an active deployment. Treat its contents as confidential; do not make this repository public without first rotating and redacting credentials.
+This repository is public. Credentials, access tokens and server addresses are not stored in tracked files: scripts read them from `bridge/.env` (see [`bridge/.env.example`](./bridge/.env.example)), and `CLAUDE.md` uses `<PLACEHOLDER>` values resolved in a local, gitignored `CLAUDE.local.md`. Older commits still contain earlier credentials, which must be treated as compromised and rotated.
