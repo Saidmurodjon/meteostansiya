@@ -1,0 +1,41 @@
+# v1: DL1 -> bridge -> ThingsBoard (CE, embedded PostgreSQL).
+# Fully self-contained: `cp .env.example .env`, fill it in, `docker compose up -d`.
+# Note: TB_DEVICE_TOKEN only exists after ThingsBoard is up and a device is
+# created, so on first run start `thingsboard` alone, create the device,
+# fill the token into .env, then start `bridge`.
+name: meteo-v1
+
+services:
+  thingsboard:
+    image: thingsboard/tb-postgres:4.2.1.1
+    restart: unless-stopped
+    ports:
+      - "${TB_HTTP_PORT:-9090}:9090"
+    environment:
+      TB_QUEUE_TYPE: in-memory
+    volumes:
+      - tb-data:/data
+      - tb-logs:/var/log/thingsboard
+
+  bridge:
+    image: python:3.12-slim
+    restart: unless-stopped
+    depends_on:
+      - thingsboard
+    working_dir: /app
+    command: ["python", "-u", "bridge/dl1_bridge.py"]
+    environment:
+      TZ: ${TZ:-Asia/Tashkent}
+      TB_HOST: thingsboard
+      TB_PORT: "9090"
+      LISTEN_PORT: "8888"
+      LOGFILE: /tmp/dl1_bridge_v1.log
+      TB_DEVICE_TOKEN: ${TB_DEVICE_TOKEN}
+    ports:
+      - "${BRIDGE_PORT:-8888}:8888"
+    volumes:
+      - ./bridge:/app/bridge:ro
+
+volumes:
+  tb-data:
+  tb-logs:

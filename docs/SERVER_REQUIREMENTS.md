@@ -16,10 +16,12 @@ Yuk hisobi (ikkala versiya uchun bir xil):
 DL1 ──TCP──▶ dl1-bridge (Python) ──HTTP──▶ ThingsBoard (+ PostgreSQL)
 ```
 
+Papka: `v1-thingsboard/` (o'z `docker-compose.yml` va `.env` fayli bilan)
+
 Komponentlar:
 
 - `thingsboard/tb-postgres` (ThingsBoard CE + ichki PostgreSQL, Java)
-- `dl1_bridge` Python skripti (bridge)
+- `bridge/dl1_bridge.py` (DL1 → ThingsBoard)
 - ixtiyoriy: Coolify (deploy boshqaruvi)
 
 Minimal talablar (ishlaydi, lekin chegarada):
@@ -74,11 +76,13 @@ Kamchiliklari:
 DL1 ──TCP──▶ dl1-bridge (Python) ──▶ VictoriaMetrics (saqlaydi) ◀── Grafana (ko'rsatadi, ogohlantiradi)
 ```
 
+Papka: `v2-grafana/` (o'z `docker-compose.yml` va `.env` fayli bilan). ThingsBoard'ga hech qanday bog'liqligi yo'q.
+
 Komponentlar:
 
 - `victoriametrics/victoria-metrics` (vaqt qatori bazasi)
 - `grafana/grafana-oss` (dashboard va ogohlantirishlar)
-- `dl1_bridge` Python skripti (bridge)
+- `bridge/dl1_bridge.py` (DL1 → VictoriaMetrics)
 
 Minimal talablar:
 
@@ -131,6 +135,8 @@ Kamchiliklari:
 ---
 
 ## Ikkala versiya uchun umumiy talablar
+
+- v1 va v2 bir-biridan mustaqil: istalgan birini alohida serverga o'rnatish mumkin. Ikkalasini bir vaqtda ishlatish uchun ixtiyoriy `tools/dl1_tee.py` DL1 oqimini ikkala bridge'ga nusxalaydi (bitta serverda ikkalasi uchun v1 + v2 resurslari qo'shiladi)
 
 - Statik IPv4 manzil (DL1 domen nomini qabul qilmaydi, faqat IP)
 - DL1 uchun ochiq TCP port, firewall'da ruxsat berilgan

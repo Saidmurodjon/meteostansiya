@@ -29,15 +29,31 @@ The logger buffers readings locally, so a temporary loss of connectivity does no
 
 The DL1 pushes a fixed-size **46-byte binary frame** over TCP at each collection interval. The frame layout was reverse-engineered by comparing raw bytes against the logger's own on-device screen readings; see [`CLAUDE.md`](./CLAUDE.md) for the full byte-offset breakdown (temperature, humidity, light, wind speed, wind direction confirmed; rainfall offset provisional pending a real rainfall event).
 
-## Bridge & data flow
+## Two independent stacks
+
+The repository holds two complete, independent versions of the receiving side. They share no code or runtime, and each one is deployed from its own folder with its own `docker-compose.yml` and `.env`:
 
 ```
-DL1 logger (station) --TCP, 46B frames--> dl1-bridge (Python) --HTTP--> ThingsBoard
+v1:  DL1 --TCP--> v1 bridge --HTTP--> ThingsBoard (+ PostgreSQL)
+v2:  DL1 --TCP--> v2 bridge --> VictoriaMetrics <-- Grafana
 ```
 
-- [`bridge/dl1_bridge_server.py`](./bridge/dl1_bridge_server.py) — production bridge, runs as a long-lived process on the same host as ThingsBoard. Listens on a TCP port, decodes incoming frames, maps the source IP to a ThingsBoard device access token, and forwards telemetry via the ThingsBoard REST API.
-- [`bridge/dl1_bridge_local.py`](./bridge/dl1_bridge_local.py) — earlier prototype that relayed data through a local machine before the bridge was moved onto the server. Kept for reference only.
-- [`bridge/make_dashboard.py`](./bridge/make_dashboard.py) — provisions a ThingsBoard device and dashboard (time-series widgets for each measurement) via the ThingsBoard API, so the setup can be reproduced or repeated for additional stations.
+- [`v1-thingsboard/`](./v1-thingsboard) — ThingsBoard CE stack.
+  - [`bridge/dl1_bridge.py`](./v1-thingsboard/bridge/dl1_bridge.py) — decodes DL1 frames and pushes telemetry to a ThingsBoard device.
+  - [`bridge/make_dashboard.py`](./v1-thingsboard/bridge/make_dashboard.py) — creates or updates the ThingsBoard dashboard via the API.
+  - [`legacy/`](./v1-thingsboard/legacy) — earlier office-server and laptop-relay bridges, kept for reference.
+- [`v2-grafana/`](./v2-grafana) — Grafana + VictoriaMetrics stack.
+  - [`bridge/dl1_bridge.py`](./v2-grafana/bridge/dl1_bridge.py) — decodes DL1 frames and writes them to VictoriaMetrics (Influx line protocol).
+  - [`grafana/`](./v2-grafana/grafana) — provisioned datasource and dashboard (station selector, one panel per measurement).
+- [`tools/dl1_tee.py`](./tools/dl1_tee.py) — optional relay. A DL1 reports to a single IP:port, so to run both stacks side by side the tee accepts the DL1 connection and copies the byte stream to both bridges. Neither stack needs it; point the DL1 straight at one bridge to run that stack alone.
+
+Run either stack:
+
+```sh
+cd v2-grafana            # or v1-thingsboard
+cp .env.example .env     # fill in values
+docker compose up -d
+```
 
 ## Infrastructure
 
@@ -56,7 +72,10 @@ Station 1 (office test unit) is connected end-to-end over Ethernet/local network
 ```
 .
 ├── CLAUDE.md          # detailed project log: infra, incidents, protocol notes
-├── bridge/            # DL1 -> ThingsBoard bridge and provisioning scripts
+├── docs/              # server requirements for v1 and v2
+├── v1-thingsboard/    # v1: ThingsBoard stack (bridge, dashboard script, compose)
+├── v2-grafana/        # v2: Grafana + VictoriaMetrics stack (bridge, provisioning, compose)
+├── tools/             # optional DL1 stream tee for running both stacks at once
 └── Rasmlar/           # reference photos of the test station hardware
 ```
 
@@ -65,8 +84,8 @@ Station 1 (office test unit) is connected end-to-end over Ethernet/local network
 Two deployment variants are documented in [`docs/SERVER_REQUIREMENTS.md`](./docs/SERVER_REQUIREMENTS.md) (in Uzbek):
 
 - **v1 — ThingsBoard**: full IoT platform, ~1.2 GB RAM for ThingsBoard alone; 2 vCPU / 4 GB RAM / 40 GB SSD recommended.
-- **v2 — Grafana + VictoriaMetrics**: lightweight time-series stack, ~80 MB RAM measured; 1–2 vCPU / 2 GB RAM / 20 GB SSD recommended. Test setup lives in [`grafana-test/`](./grafana-test) with [`bridge/log_to_vm.py`](./bridge/log_to_vm.py).
+- **v2 — Grafana + VictoriaMetrics**: lightweight time-series stack, ~80 MB RAM measured; 1–2 vCPU / 2 GB RAM / 20 GB SSD recommended.
 
 ## Security note
 
-This repository is public. Credentials, access tokens and server addresses are not stored in tracked files: scripts read them from `bridge/.env` (see [`bridge/.env.example`](./bridge/.env.example)), and `CLAUDE.md` uses `<PLACEHOLDER>` values resolved in a local, gitignored `CLAUDE.local.md`. Older commits still contain earlier credentials, which must be treated as compromised and rotated.
+This repository is public. Credentials, access tokens and server addresses are not stored in tracked files: each stack reads them from its own gitignored `.env` (see [`v1-thingsboard/.env.example`](./v1-thingsboard/.env.example) and [`v2-grafana/.env.example`](./v2-grafana/.env.example)), and `CLAUDE.md` uses `<PLACEHOLDER>` values resolved in a local, gitignored `CLAUDE.local.md`. Older commits still contain earlier credentials, which must be treated as compromised and rotated.

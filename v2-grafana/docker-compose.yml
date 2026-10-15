@@ -1,0 +1,58 @@
+# v2: DL1 -> bridge -> VictoriaMetrics <- Grafana.
+# Fully self-contained (no ThingsBoard): `cp .env.example .env`, fill it in,
+# `docker compose up -d`.
+name: meteo-v2
+
+services:
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.102.1
+    container_name: meteo-vm
+    restart: unless-stopped
+    command: ["-retentionPeriod=${VM_RETENTION:-5y}"]
+    ports:
+      - "127.0.0.1:8428:8428"
+    volumes:
+      - vm-data:/victoria-metrics-data
+
+  grafana:
+    image: grafana/grafana-oss:11.2.0
+    container_name: meteo-grafana
+    restart: unless-stopped
+    depends_on:
+      - victoriametrics
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD in .env}
+      GF_USERS_DEFAULT_THEME: light
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+
+  bridge:
+    image: python:3.12-slim
+    container_name: meteo-v2-bridge
+    restart: unless-stopped
+    depends_on:
+      - victoriametrics
+    working_dir: /app
+    command: ["python", "-u", "bridge/dl1_bridge.py"]
+    environment:
+      TZ: ${TZ:-Asia/Tashkent}
+      LISTEN_PORT: "8888"
+      LOGFILE: /tmp/dl1_bridge_v2.log
+      VM_WRITE_URL: http://victoriametrics:8428/write
+      DEFAULT_STATION: ${DEFAULT_STATION:-1}
+    ports:
+      - "${BRIDGE_PORT:-8888}:8888"
+    volumes:
+      - ./bridge:/app/bridge:ro
+
+volumes:
+  # Fixed names so data from the earlier Mac test containers is kept.
+  vm-data:
+    name: meteo-vm-data
+  grafana-data:
+    name: meteo-grafana-data

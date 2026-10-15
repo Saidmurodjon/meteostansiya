@@ -4,8 +4,8 @@ import urllib.request
 import os
 
 
-def _load_env(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")):
-    # Secrets live in a gitignored bridge/.env (see .env.example), not in the repo.
+def _load_env(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")):
+    # Secrets live in a gitignored v1-thingsboard/.env (see .env.example), not in the repo.
     if os.path.exists(path):
         for line in open(path):
             line = line.strip()
@@ -17,10 +17,10 @@ def _load_env(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), ".en
 _load_env()
 
 
-TB_BASE = "http://localhost:9090"
+TB_BASE = os.environ.get("TB_BASE", "http://localhost:9090")
 USERNAME = os.environ["TB_USERNAME"]
 PASSWORD = os.environ["TB_PASSWORD"]
-DEVICE_ID = "e595c5f0-b70a-11f1-8df9-f17783d629e6"  # Meteostansiya-1 (local Mac TB)
+DEVICE_ID = os.environ["TB_DEVICE_ID"]  # ThingsBoard device the dashboard shows
 
 METRICS = [
     {"name": "temperature", "label": "Harorat", "units": "°C", "color": "#EF5350", "icon": "thermostat", "iconColor": "#EF5350"},

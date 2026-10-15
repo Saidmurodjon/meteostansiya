@@ -1,9 +1,27 @@
 # Meteostansiya — loyiha holati
 
-> **Eslatma**: repo public. Haqiqiy IP, token va parollar bu faylda `<PLACEHOLDER>` ko'rinishida; qiymatlari gitignore qilingan `CLAUDE.local.md` (va skriptlar uchun `bridge/.env`) faylida.
+> **Eslatma**: repo public. Haqiqiy IP, token va parollar bu faylda `<PLACEHOLDER>` ko'rinishida; qiymatlari gitignore qilingan `CLAUDE.local.md` (va skriptlar/compose uchun `v1-thingsboard/.env`, `v2-grafana/.env`) faylida.
 
 
 _Oxirgi yangilanish: 2026-09-23 (Stansiya-1 SIM bilan dalada ishga tushirildi, vaqtinchalik Mac-ThingsBoard sxemasi orqali masofadan ulanish tekshirilmoqda — pastga, yangi bo'limga qarang)_
+
+## Loyiha tuzilmasi: v1 va v2 — ikkita mustaqil tizim (2026-10-15)
+
+Foydalanuvchi talabi: Grafana "test" emas, **v2 — ThingsBoard'dan mustaqil ishlaydigan alohida tizim**; v1 va v2 bir-biriga bog'liq bo'lmasligi, har birini alohida ishga tushirish mumkin bo'lishi kerak.
+
+- **`v1-thingsboard/`** — DL1 → `bridge/dl1_bridge.py` → ThingsBoard. O'z `docker-compose.yml` (`thingsboard/tb-postgres:4.2.1.1` + bridge), `.env`/`.env.example`. `bridge/make_dashboard.py` dashboard'ni yaratadi/joyida yangilaydi. `legacy/` — eski ofis-server (`dl1_bridge_server.py`, IP→token xaritasi), noutbuk-relay (`dl1_bridge_local.py`) va `make_dashboard_office.py`.
+- **`v2-grafana/`** — DL1 → `bridge/dl1_bridge.py` → VictoriaMetrics ← Grafana. O'z `docker-compose.yml` (VM `v1.102.1`, Grafana `11.2.0`, bridge `python:3.12-slim`), `.env`/`.env.example`, `grafana/provisioning` + `grafana/dashboards/meteo.json`. Volume nomlari qat'iy: `meteo-vm-data`, `meteo-grafana-data`.
+- Ikkala bridge **kod almashmaydi** (parser ataylab har birida alohida nusxada — protokol o'zgarsa ikkalasini ham yangilash kerak). Ikkalasi ham manba IP'ga tayanmaydi (bitta standart device/station).
+- **`tools/dl1_tee.py`** (ixtiyoriy) — DL1 faqat bitta IP:port'ga ulanadi; tee DL1 ulanishini qabul qilib, baytlarni bir nechta bridge'ga nusxalaydi. Target o'chiq bo'lsa o'tkazib yuboradi va keyingi chunk'da qayta ulanadi; Docker port-proksi orqasidagi konteyner restart bo'lganda ham buni (MSG_PEEK EOF tekshiruvi bilan) sezadi. Tee restart qilinsa DL1 qayta ulanadi; bridge'lar restart qilinsa — yo'q (tee DL1 ulanishini ushlab turadi).
+
+**Mac'dagi joriy ish holati:**
+```
+DL1 → ngrok → :8888 tools/dl1_tee.py ─┬→ :8801 v1 bridge (python3 v1-thingsboard/bridge/dl1_bridge.py, log /tmp/dl1_bridge_v1.log) → ThingsBoard (meteo-thingsboard konteyner, :9090)
+                                      └→ :8802 v2 bridge (meteo-v2-bridge konteyner, `docker logs`) → meteo-vm (:8428) ← meteo-grafana (:3001)
+```
+- v2: `cd v2-grafana && docker compose up -d`. v1 ThingsBoard hali eski qo'lda yaratilgan `meteo-thingsboard` konteynerida (compose'ga ko'chirilmagan — volume `mysqlteo-tb-data`); v1 bridge Mac'da oddiy fon jarayoni.
+- Tee: `python3 tools/dl1_tee.py --listen 8888 --to 127.0.0.1:8801 --to 127.0.0.1:8802`, log `/tmp/dl1_tee.log`.
+- Eski `bridge/log_to_vm.py` (v2'ni v1 logiga bog'lab qo'ygan) olib tashlandi.
 
 ## ⚠️ KUTILAYOTGAN QAROR: production'ga chiqish (hali BOSHLANMAGAN)
 
@@ -25,7 +43,7 @@ Bugun Stansiya-1 (test punkti emas, alohida jismoniy stansiya) **tashqariga o'rn
 1. **Docker Desktop** ishga tushirildi, **ThingsBoard** (`thingsboard/tb-postgres` image, demo tenant bilan) lokal konteynerda ko'tarildi: konteyner nomi `meteo-thingsboard`, port `9090`, volume `mysqlteo-tb-data`. Bu — office serverdagi ThingsBoard'dan **butunlay alohida, yangi** instans (device/dashboard tarixi umumiy emas).
    - Tenant login: `<TB_USERNAME>` / `<TB_PASSWORD>` (demo standart, xuddi office serverdagidek — bu ham ishlab chiqarishga chiqishdan oldin almashtirilishi kerak).
    - Yangi device yaratildi: **Meteostansiya-1** (id `e595c5f0-b70a-11f1-8df9-f17783d629e6`), access token: `<TB_TOKEN_MAC>`.
-2. Yangi bridge skripti yozildi: **`meteostansiya/bridge/dl1_bridge_mac.py`** — `dl1_bridge_server.py`ning aynan shu parserini (yomg'ir uchun to'g'ri `data[37]` offseti bilan) ishlatadi, lekin `localhost:9090`ga (shu Mac'dagi ThingsBoard'ga) push qiladi va IP bo'yicha filtrlamasdan **har qanday kelgan ulanishni** `Meteostansiya-1` tokeniga yo'naltiradi (hozircha faqat bitta stansiya ulangani uchun). Fon jarayonida ishlab turibdi (8888-portda tinglaydi), log: `/tmp/dl1_bridge_mac.log`.
+2. Yangi bridge skripti yozildi: **`meteostansiya/bridge/dl1_bridge_mac.py`** (2026-10-15'dan: `v1-thingsboard/bridge/dl1_bridge.py`) — `dl1_bridge_server.py`ning aynan shu parserini (yomg'ir uchun to'g'ri `data[37]` offseti bilan) ishlatadi, lekin `localhost:9090`ga (shu Mac'dagi ThingsBoard'ga) push qiladi va IP bo'yicha filtrlamasdan **har qanday kelgan ulanishni** `Meteostansiya-1` tokeniga yo'naltiradi (hozircha faqat bitta stansiya ulangani uchun). Fon jarayonida ishlab turibdi (8888-portda tinglaydi), log: `/tmp/dl1_bridge_mac.log`.
 3. **Tashqariga chiqarish muammosi**: bu Mac uyda/mobil tarmoqda NAT orqasida — DL1 SIM orqali unga to'g'ridan-to'g'ri ulana olmaydi, portni tashqariga chiqarish (tunnel) kerak bo'ldi:
    - **ngrok** — TCP tunnel uchun bepul tarifda ham **karta tasdiqlash** talab qilinishi aniqlandi (`ERR_NGROK_8013`, rasman hujjatlashtirilgan — "This card will NOT be charged", texnik xato emas, ularning siyosati; faqat HTTP tunnellarga tegishli emas, aynan TCP'ga tegishli).
    - **jprq** (ngrok'ga o'xshash, kartasiz muqobil deb sinaldi) — uning TCP tunnel xizmati (`tcp.jprq.io`) DNS darajasida umuman topilmadi (`NXDOMAIN`), ya'ni bu loyiha (2021'dan beri yangilanmagan) **o'lik/tashlab qo'yilgan** ekan. (Eslatma: global `pip install jprq` boshqa loyiha — `aider-chat` — kerak qiladigan `aiohttp`/`click`/`rich`/`certifi` versiyalarini pastga tushirib yuborgan edi, darhol tuzatildi va jprq alohida virtualenv'ga o'tkazildi, global muhitga zarar qolmadi.)
@@ -43,7 +61,7 @@ Bugun Stansiya-1 (test punkti emas, alohida jismoniy stansiya) **tashqariga o'rn
 - Bridge (`dl1_bridge_mac.py`) endi freym uzunligini sarlavhadan (`data[2:4]`+2) oladi, `40 01` bilan boshlanmagan baytlarni tashlab "resync" qiladi va har freymning xom hex'ini logga yozadi. 19:47'da DL1 TCP oqimiga **Quectel AT buyruqlarini** (`AT+QISEND=0,46\r\n`, 43 bayt) aralashtirib yubordi — DL1 firmware/modem xatosi; resync buni muammosiz o'tkazib yubordi.
 - **`data[38:40]` (uint16 BE) ÷ 100 = asosiy 12V batareya kuchlanishi (V) — yuqori ehtimol bilan tasdiqlangan (2026-10-15)**: 10-14 kechqurun ~11.0 V edi; 10-15 ertalab foydalanuvchi o'tirib qolgan asosiy 12V batareyani yangisiga almashtirgach, qiymat birdan ~12.05–12.17 V ga sakradi. 2026-10-15 08:35'dan bridge uni `battery_voltage` sifatida ThingsBoard'ga va (log_to_vm.py orqali) VictoriaMetrics'ga yozadi; ikkala dashboard'da "Batareya kuchlanishi" grafigi bor (`make_dashboard_mac.py` endi mavjud dashboard'ni joyida yangilaydi). Logdagi xom freymlardan tarix ham yuklangan: eski batareya 10-14 17:49'da 11.2 V → 22:01'da **10.15 V** gacha tushgan (DL1 shu payt ulanishni yo'qotgan). Ehtimol, DL1'ning "osilib qolishi"/qayta ulanmasligi va `AT+QISEND` oqib chiqishi past kuchlanish bilan bog'liq bo'lgan — yangi batareya bilan kuzatish kerak. `data[26]` ham `01` — shamol tezligi uint16 `data[26:28]` bo'lishi mumkin (2.08 vs 4.64 m/s), DL1 ekrani bilan tasdiqlanmagan.
 - Mac kechasi baribir uxladi (`caffeinate -is` faqat zaryadkada ishlaydi; qopqoq yopilsa/batareyada uxlaydi) — 23:26–07:57 ngrok uzilgan. DL1'dan oxirgi ulanish 22:01–22:18; ngrok 07:57'da o'sha manzil bilan tiklangan bo'lsa ham DL1 qayta ulanmadi.
-- Sinov uchun Grafana + VictoriaMetrics ko'tarildi: konteynerlar `meteo-vm` (127.0.0.1:8428, volume `meteo-vm-data`, retention 5y) va `meteo-grafana` (http://127.0.0.1:3001, admin / `<GRAFANA_PASSWORD>`), tarmoq `meteo-net`; provisioning `grafana-test/`. `bridge/log_to_vm.py` bridge logini o'qib VM'ga yozadi (bridge'ni restart qilmaslik uchun), log `/tmp/log_to_vm.log`.
+- (Tarix — 2026-10-15'da v2 sifatida mustaqil tizimga aylantirildi, yuqoridagi "Loyiha tuzilmasi" bo'limiga qarang.) Sinov uchun Grafana + VictoriaMetrics ko'tarildi: konteynerlar `meteo-vm` (127.0.0.1:8428, volume `meteo-vm-data`, retention 5y) va `meteo-grafana` (http://127.0.0.1:3001, admin / `<GRAFANA_PASSWORD>`), tarmoq `meteo-net`; provisioning `grafana-test/`. `bridge/log_to_vm.py` bridge logini o'qib VM'ga yozadi (bridge'ni restart qilmaslik uchun), log `/tmp/log_to_vm.log`.
 
 **Yon ish — eski USB eksport tahlili**: shu jarayon davomida foydalanuvchi DL1'ning ichki xotirasidan eski USB eksport faylini (`/Volumes/NO NAME/Data20180725093442.csv`, 8549 qator) taqdim etdi, undan interaktiv HTML dashboard (Artifact) qurib berildi. Muhim kashfiyot: faylning faqat dastlabki **107 qatori** (2025-08-18 – 2025-08-20) ishonchli sanaga ega — 109-qatordan boshlab DL1'ning ichki soati **"2018-07-25"ga** (yoki buzilgan "20@5-10-00"/"20@5-10-01" ko'rinishlarga) qulflanib qolgan, ya'ni RTC muammosi avvalgi hujjatlashtirilgan "daqiqa/soniya ~12 daq farq" muammosidan ancha jiddiyroq ekan — **sana maydoni butunlay ishonchsiz** bo'lishi mumkin, faqat vaqt (soat:daqiqa:soniya) taxminan izchil ko'rinadi. Bu holat hali sabab-oqibat jihatidan tekshirilmagan (RTC batareyasi tugaganmi yoki boshqa sabab bormi — aniqlanmagan).
 
@@ -147,8 +165,8 @@ DL1 (ofis, Ethernet, LAN IP Set = 192.168.1.44:8888) → iep-server (lokal tarmo
 **Noutbuk endi umuman kerak emas** — zanjir butunlay serverning o'zida ishlaydi. Tasdiqlangan (`docker logs dl1-bridge` orqali): `push to ThingsBoard OK`.
 
 - Ishlayotgan konteyner: `iep-server`da **`dl1-bridge`** (`--network host --restart=always`, skript: `/home/iep-server/dl1-bridge/dl1_bridge.py`, `localhost:9090` orqali ThingsBoard'ga ulanadi)
-- Manba nusxalari loyihada: `meteostansiya/bridge/dl1_bridge_server.py` (serverdagi versiya), `meteostansiya/bridge/dl1_bridge_local.py` (eski, noutbuk-orqali versiya — endi kerak emas, faqat tarix uchun saqlangan)
-- Dashboard qayta yaratish skripti: **`meteostansiya/bridge/make_dashboard.py`** (server ichidan `python3` bilan ishga tushiriladi, `10.0.2.2:9090` orqali ThingsBoard API'siga ulanadi)
+- Manba nusxalari loyihada: `v1-thingsboard/legacy/dl1_bridge_server.py` (serverdagi versiya), `v1-thingsboard/legacy/dl1_bridge_local.py` (eski, noutbuk-orqali versiya — endi kerak emas, faqat tarix uchun saqlangan)
+- Dashboard qayta yaratish skripti: **`v1-thingsboard/legacy/make_dashboard_office.py`** (server ichidan `python3` bilan ishga tushiriladi, `10.0.2.2:9090` orqali ThingsBoard API'siga ulanadi)
 - Serverga ikkita yo'l bilan SSH ulanish mumkin: Tailscale (`<TAILSCALE_IP>`, har qanday joydan) yoki ofis lokal tarmog'idan (`192.168.1.44`, tezroq, faqat shu ofisdan turib)
 
 ## ThingsBoard obyektlari (joriy)

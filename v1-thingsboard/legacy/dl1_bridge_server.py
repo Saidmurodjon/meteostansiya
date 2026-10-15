@@ -8,8 +8,8 @@ import threading
 import os
 
 
-def _load_env(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")):
-    # Secrets live in a gitignored bridge/.env (see .env.example), not in the repo.
+def _load_env(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")):
+    # Secrets live in a gitignored v1-thingsboard/.env (see .env.example), not in the repo.
     if os.path.exists(path):
         for line in open(path):
             line = line.strip()
@@ -22,25 +22,27 @@ _load_env()
 
 
 LISTEN_PORT = 8888
-LOGFILE = "/private/tmp/claude-501/-Users-macbookprom2pro-Desktop-meteostansiya/aefeeed4-038d-4095-b52b-b2c29e6d129c/scratchpad/dl1_bridge.log"
+LOGFILE = "/data/dl1_bridge.log"
 
-# ThingsBoard connection (via Tailscale). Will work once the host port mapping
-# (9090 -> container 9090) is fixed in Coolify.
-TB_HOST = os.environ.get("TB_HOST_TAILSCALE", "localhost")
+# Runs on the same host as ThingsBoard (host networking), so localhost works
+# now that the 9090 -> 9090 port mapping is fixed.
+TB_HOST = "localhost"
 TB_PORT = 9090
-TB_ACCESS_TOKEN = os.environ["TB_TOKEN_STATION1"]  # device: Meteostansiya-1
 
-# Map DL1 source IP -> ThingsBoard access token, for when more stations are added.
+# Map DL1 source IP -> ThingsBoard access token. Add one entry per station.
 DEVICE_TOKENS = {
-    "192.168.1.50": TB_ACCESS_TOKEN,
+    "192.168.1.50": os.environ["TB_TOKEN_STATION1"],  # Metrostansiya-1 (office test unit)
 }
 
 
 def log(msg: str):
     line = f"[{datetime.datetime.now().isoformat()}] {msg}"
     print(line, flush=True)
-    with open(LOGFILE, "a", buffering=1) as f:
-        f.write(line + "\n")
+    try:
+        with open(LOGFILE, "a", buffering=1) as f:
+            f.write(line + "\n")
+    except Exception:
+        pass
 
 
 def parse_frame(data: bytes):
@@ -57,8 +59,13 @@ def parse_frame(data: bytes):
     light_raw = data[22]
     wind_speed_raw = data[27]
     wind_dir_raw = struct.unpack(">H", data[31:33])[0]
-    # Rainfall byte offset not yet confirmed (always 0.0mm in test samples).
-    rainfall_raw = struct.unpack(">H", data[38:40])[0]
+    # Confirmed 2026-09-07 via a manual tipping-bucket test: single byte at
+    # offset 37 (not the 2-byte data[38:40] guess, which is always 0x0000).
+    # Scaling assumed to match the temp/humidity convention (raw/10); the
+    # value decayed 10 -> 4 -> 0 over ~2 minutes after the manual test rather
+    # than accumulating, so it may be a short-term pulse count/intensity
+    # rather than a running total mm - re-verify against real rainfall.
+    rainfall_raw = data[37]
 
     return {
         "device_minute": minute,
@@ -88,7 +95,11 @@ def push_to_thingsboard(token: str, telemetry: dict) -> bool:
 
 def handle_conn(conn: socket.socket, addr):
     ip = addr[0]
-    conn.settimeout(60)
+    # DL1 keeps one long-lived connection and can go quiet for a few minutes
+    # between reports without actually being dead. A short timeout here made
+    # the bridge silently close the connection out from under DL1, which
+    # then took a long time to notice and reconnect (2026-09-07 incident).
+    conn.settimeout(600)
     try:
         buf = b""
         while True:
@@ -110,7 +121,7 @@ def handle_conn(conn: socket.socket, addr):
                 ok = push_to_thingsboard(token, parsed)
                 log(f"{ip}: push to ThingsBoard {'OK' if ok else 'FAILED'}")
     except socket.timeout:
-        pass
+        log(f"{ip}: idle timeout, closing connection")
     except Exception as e:
         log(f"{ip}: connection error: {e}")
     finally:

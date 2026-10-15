@@ -4,8 +4,8 @@ import urllib.request
 import os
 
 
-def _load_env(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")):
-    # Secrets live in a gitignored bridge/.env (see .env.example), not in the repo.
+def _load_env(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")):
+    # Secrets live in a gitignored v1-thingsboard/.env (see .env.example), not in the repo.
     if os.path.exists(path):
         for line in open(path):
             line = line.strip()

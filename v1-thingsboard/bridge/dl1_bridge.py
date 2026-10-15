@@ -8,8 +8,8 @@ import threading
 import os
 
 
-def _load_env(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")):
-    # Secrets live in a gitignored bridge/.env (see .env.example), not in the repo.
+def _load_env(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")):
+    # Secrets live in a gitignored v1-thingsboard/.env (see .env.example), not in the repo.
     if os.path.exists(path):
         for line in open(path):
             line = line.strip()
@@ -21,17 +21,16 @@ def _load_env(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), ".en
 _load_env()
 
 
-LISTEN_PORT = 8888
-LOGFILE = "/tmp/dl1_bridge_mac.log"
+LISTEN_PORT = int(os.environ.get("LISTEN_PORT", "8888"))
+LOGFILE = os.environ.get("LOGFILE", "/tmp/dl1_bridge_v1.log")
 
-# Runs locally on the Mac, alongside the local ThingsBoard docker container.
-TB_HOST = "localhost"
-TB_PORT = 9090
+TB_HOST = os.environ.get("TB_HOST", "localhost")
+TB_PORT = int(os.environ.get("TB_PORT", "9090"))
 
-# Only one station connects right now (via ngrok TCP tunnel, so the source IP
-# seen here is ngrok's forwarding address, not the DL1's real IP) - push
-# every connection to this one device token until more stations are added.
-DEFAULT_TOKEN = os.environ["TB_TOKEN_MAC"]  # device: Meteostansiya-1 (local TB)
+# Stations arrive over mobile networks / tunnels, so the source IP does not
+# identify the DL1 - every connection goes to this one device token until
+# per-station identification (DL1 ID inside the frame) is implemented.
+DEFAULT_TOKEN = os.environ["TB_DEVICE_TOKEN"]
 
 
 def log(msg: str):
@@ -132,7 +131,7 @@ def main():
     srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     srv.bind(("0.0.0.0", LISTEN_PORT))
     srv.listen(20)
-    log(f"DL1 -> ThingsBoard (local) bridge listening on 0.0.0.0:{LISTEN_PORT}")
+    log(f"[v1] DL1 -> ThingsBoard bridge listening on 0.0.0.0:{LISTEN_PORT}")
     while True:
         conn, addr = srv.accept()
         threading.Thread(target=handle_conn, args=(conn, addr), daemon=True).start()

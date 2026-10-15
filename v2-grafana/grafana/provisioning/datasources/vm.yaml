@@ -3,6 +3,6 @@ datasources:
   - name: VictoriaMetrics
     uid: vm
     type: prometheus
-    url: http://meteo-vm:8428
+    url: http://victoriametrics:8428
     access: proxy
     isDefault: true
